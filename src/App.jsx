@@ -350,24 +350,45 @@ e.target.reset()
     setWalkinName("")
     setWalkinPax(1)
   }
-  async function downloadTicketPDF(ticket) {
-  const ticketElement = document.getElementById("ticket-pdf")
+  function downloadTicketPDF(ticket) {
+  const qrCanvas = document.querySelector("#ticket-pdf canvas")
 
-  if (!ticketElement) return
+  if (!qrCanvas) {
+    alert("QR belum ready. Cuba tekan sekali lagi.")
+    return
+  }
 
-  const canvas = await html2canvas(ticketElement, {
-    scale: 2,
-    backgroundColor: "#000000",
-  })
+  const qrImage = qrCanvas.toDataURL("image/png")
 
-  const imgData = canvas.toDataURL("image/png")
   const pdf = new jsPDF("p", "mm", "a4")
 
-  const pdfWidth = pdf.internal.pageSize.getWidth()
-  const imgWidth = pdfWidth - 20
-  const imgHeight = (canvas.height * imgWidth) / canvas.width
+  pdf.setFillColor(0, 0, 0)
+  pdf.rect(0, 0, 210, 297, "F")
 
-  pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight)
+  pdf.setTextColor(220, 38, 38)
+  pdf.setFontSize(26)
+  pdf.text("MCFEST TICKET", 105, 25, { align: "center" })
+
+  pdf.addImage(qrImage, "PNG", 65, 35, 80, 80)
+
+  pdf.setTextColor(255, 255, 255)
+  pdf.setFontSize(14)
+
+  pdf.text(`Ticket ID: ${ticket.ticketId}`, 20, 135)
+  pdf.text(`Group: ${ticket.groupName}`, 20, 145)
+  pdf.text(`Payment: ${ticket.paymentStatus}`, 20, 155)
+  pdf.text(`Status: ${ticket.status}`, 20, 165)
+  pdf.text(`Total: 5 Pax`, 20, 175)
+  pdf.text(`Hari: ${ticket.day}`, 20, 185)
+  pdf.text(`Tarikh: ${ticket.date}`, 20, 195)
+  pdf.text(`Session: ${ticket.session}`, 20, 205)
+
+  pdf.setTextColor(160, 160, 160)
+  pdf.setFontSize(11)
+  pdf.text("Sila tunjuk QR ini semasa hadir ke event.", 105, 230, {
+    align: "center",
+  })
+
   pdf.save(`${ticket.ticketId}-MCFEST-Ticket.pdf`)
 }
   function exportParticipants() {
