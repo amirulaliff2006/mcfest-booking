@@ -694,8 +694,10 @@ sabtuPetang: Number(slotLimits.sabtuPetang),
 
       {success && (
         <Popup>
+          <div id="ticket-pdf" className="rounded-2xl bg-black p-5 text-white">
           <h2 className="horror-subtitle mb-4 text-center text-4xl text-red-600">
             TICKET BERJAYA
+            <div id="ticket-pdf" className="rounded-2xl bg-black p-5 text-white"></div>
           </h2>
 
           <div className="mb-6 flex justify-center">
@@ -751,8 +753,10 @@ sabtuPetang: Number(slotLimits.sabtuPetang),
           </div>
 
           <p className="mt-5 text-center text-sm text-gray-400">
-            Screenshot QR ini semasa hadir ke event.
+            Tunjuk QR ini semasa hadir ke event.
           </p>
+          </div>
+          
                 <button
   onClick={() => downloadTicketPDF(success)}
   className="mt-5 w-full rounded-xl bg-green-700 py-3 font-bold hover:bg-green-600"
@@ -1126,7 +1130,7 @@ setParticipantType,
           <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-0 sm:grid-cols-3">
             <Info title="5 Pax 1 Group" text="Kumpulkan 5 orang ahli" icon="👥" />
             <Info title="2 Session" text="Pagi & Petang" icon="🕘" middle />
-            <Info title="2 Hari Sahaja" text="Khamis & Jumaat" icon="📅" />
+            <Info title="3 Hari Sahaja!" text="Khamis Jumaat & Sabtu" icon="📅" />
           </div>
 
           <a
