@@ -1,4 +1,6 @@
 import * as XLSX from "xlsx"
+import jsPDF from "jspdf"
+import html2canvas from "html2canvas"
 import { useEffect, useState } from "react"
 import { QRCodeCanvas } from "qrcode.react"
 import paymentQR from "./assets/paymentQR.jpeg"
@@ -20,6 +22,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 
 function App() {
   const [page, setPage] = useState("home")
+  const [participantType, setParticipantType] = useState("student")
   const [adminTab, setAdminTab] = useState("dashboard")
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false)
   const [showAdminLogin, setShowAdminLogin] = useState(false)
@@ -28,6 +31,10 @@ function App() {
   const [loading, setLoading] = useState(true)
 
   const [pendingPayment, setPendingPayment] = useState(null)
+  const [pendingAgreement, setPendingAgreement] = useState(null)
+
+  const [agreeRules, setAgreeRules] = useState(false)
+  const [agreeDeclaration, setAgreeDeclaration] = useState(false)
   const [paymentProof, setPaymentProof] = useState(null)
   const [uploading, setUploading] = useState(false)
 
@@ -40,13 +47,16 @@ function App() {
   const [ticketPrice, setTicketPrice] = useState(0)
   const [dateKhamis, setDateKhamis] = useState("23 Mei 2026")
   const [dateJumaat, setDateJumaat] = useState("24 Mei 2026")
-  const [whatsapp, setWhatsapp] = useState("601123456789")
+  const [dateSabtu, setDateSabtu] = useState("20 June 2026")
+  const [whatsapp, setWhatsapp] = useState("601139832542")
 
   const [slotLimits, setSlotLimits] = useState({
     khamisPagi: 20,
     khamisPetang: 20,
     jumaatPagi: 20,
     jumaatPetang: 20,
+    sabtuPagi: 20,
+    sabtuPetang: 20,
   })
 
   const [search, setSearch] = useState("")
@@ -64,14 +74,20 @@ if (settingsSnap.exists()) {
 
   setTicketPrice(data.ticketPrice || 0)
   setWhatsapp(data.whatsapp || "")
+
   setDateKhamis(data.dateKhamis || "")
   setDateJumaat(data.dateJumaat || "")
+  setDateSabtu(data.dateSabtu || "")
 
   setSlotLimits({
     khamisPagi: data.khamisPagi || 20,
     khamisPetang: data.khamisPetang || 20,
+
     jumaatPagi: data.jumaatPagi || 20,
     jumaatPetang: data.jumaatPetang || 20,
+
+    sabtuPagi: data.sabtuPagi || 20,
+    sabtuPetang: data.sabtuPetang || 20,
   })
 }
       const querySnapshot = await getDocs(collection(db, "bookings"))
@@ -106,6 +122,13 @@ if (settingsSnap.exists()) {
   const jumaatPetangBooked = onlineBookings.filter(
     (b) => b.day === "Jumaat" && b.session === "Petang"
   ).length
+const sabtuPagiBooked = onlineBookings.filter(
+  (b) => b.day === "Sabtu" && b.session === "Pagi"
+).length
+
+const sabtuPetangBooked = onlineBookings.filter(
+  (b) => b.day === "Sabtu" && b.session === "Petang"
+).length
 
   const slotData = {
     khamisPagi: {
@@ -124,6 +147,15 @@ if (settingsSnap.exists()) {
       booked: jumaatPetangBooked,
       max: slotLimits.jumaatPetang,
     },
+    sabtuPagi: {
+  booked: sabtuPagiBooked,
+  max: slotLimits.sabtuPagi,
+},
+
+sabtuPetang: {
+  booked: sabtuPetangBooked,
+  max: slotLimits.sabtuPetang,
+},
   }
 
   async function handleBooking(e) {
@@ -168,13 +200,34 @@ if (settingsSnap.exists()) {
     ) {
       alert("Jumaat Petang FULL")
       return
-    }
+    }if (
+  selectedDay === "Sabtu" &&
+  selectedSession === "Pagi" &&
+  sabtuPagiBooked >= slotLimits.sabtuPagi
+) {
+  alert("Sabtu Pagi FULL")
+  return
+}
+
+if (
+  selectedDay === "Sabtu" &&
+  selectedSession === "Petang" &&
+  sabtuPetangBooked >= slotLimits.sabtuPetang
+) {
+  alert("Sabtu Petang FULL")
+  return
+}
 
     const newBooking = {
       ticketId: `BKG${Date.now().toString().slice(-5)}`,
       groupName: formData.get("groupName"),
       day: selectedDay,
-      date: selectedDay === "Khamis" ? dateKhamis : dateJumaat,
+      date:
+  selectedDay === "Khamis"
+    ? dateKhamis
+    : selectedDay === "Jumaat"
+    ? dateJumaat
+    : dateSabtu,
       session: selectedSession,
       phone: formData.get("phone"),
       status: "Pending Payment",
@@ -182,28 +235,13 @@ if (settingsSnap.exists()) {
       paymentProofUrl: "",
       type: "booking",
       pax: 5,
-      members: [
-  {
-    name: formData.get("member1"),
-    studentId: formData.get("studentId1"),
-  },
-  {
-    name: formData.get("member2"),
-    studentId: formData.get("studentId2"),
-  },
-  {
-    name: formData.get("member3"),
-    studentId: formData.get("studentId3"),
-  },
-  {
-    name: formData.get("member4"),
-    studentId: formData.get("studentId4"),
-  },
-  {
-    name: formData.get("member5"),
-    studentId: formData.get("studentId5"),
-  },
-],
+     members: [1, 2, 3, 4, 5].map((num) => ({
+  name: formData.get(`member${num}`),
+  studentId: formData.get(`studentId${num}`) || "",
+  phone: formData.get(`memberPhone${num}`) || "",
+})),
+
+participantType: formData.get("participantType"),
       createdAt: new Date(),
     }
 
@@ -214,9 +252,14 @@ if (settingsSnap.exists()) {
       id: docRef.id,
     }
 
-    setBookings([...bookings, savedBooking])
-    setPendingPayment(savedBooking)
-    e.target.reset()
+   setBookings([...bookings, savedBooking])
+
+setPendingAgreement(savedBooking)
+
+setAgreeRules(false)
+setAgreeDeclaration(false)
+
+e.target.reset()
   }
     async function submitPaymentProof() {
     if (!paymentProof || !pendingPayment) return
@@ -307,6 +350,26 @@ if (settingsSnap.exists()) {
     setWalkinName("")
     setWalkinPax(1)
   }
+  async function downloadTicketPDF(ticket) {
+  const ticketElement = document.getElementById("ticket-pdf")
+
+  if (!ticketElement) return
+
+  const canvas = await html2canvas(ticketElement, {
+    scale: 2,
+    backgroundColor: "#000000",
+  })
+
+  const imgData = canvas.toDataURL("image/png")
+  const pdf = new jsPDF("p", "mm", "a4")
+
+  const pdfWidth = pdf.internal.pageSize.getWidth()
+  const imgWidth = pdfWidth - 20
+  const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+  pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight)
+  pdf.save(`${ticket.ticketId}-MCFEST-Ticket.pdf`)
+}
   function exportParticipants() {
   const rows = []
 
@@ -318,7 +381,9 @@ if (settingsSnap.exists()) {
           "Group Name": booking.groupName,
           "Member No": index + 1,
           "Name": typeof member === "string" ? member : member.name,
-          "Student ID": typeof member === "string" ? "" : member.studentId,
+          "Student ID": typeof member === "string" ? "" : member.studentId || "",
+          "Member Phone": typeof member === "string" ? "" : member.phone || "",
+          "Participant Type": booking.participantType || "student",
           "Phone Wakil": booking.phone,
           "Day": booking.day,
           "Date": booking.date,
@@ -342,6 +407,10 @@ if (settingsSnap.exists()) {
     whatsapp: whatsapp,
     dateKhamis: dateKhamis,
     dateJumaat: dateJumaat,
+    dateSabtu: dateSabtu,
+
+sabtuPagi: Number(slotLimits.sabtuPagi),
+sabtuPetang: Number(slotLimits.sabtuPetang),
     khamisPagi: Number(slotLimits.khamisPagi),
     khamisPetang: Number(slotLimits.khamisPetang),
     jumaatPagi: Number(slotLimits.jumaatPagi),
@@ -409,10 +478,13 @@ if (settingsSnap.exists()) {
       {page === "home" || !isAdminLoggedIn ? (
         <MainPage
           setPage={setPage}
+          participantType={participantType}
+          setParticipantType={setParticipantType}
           setShowAdminLogin={setShowAdminLogin}
           handleBooking={handleBooking}
           dateKhamis={dateKhamis}
           dateJumaat={dateJumaat}
+          dateSabtu={dateSabtu}
           whatsapp={whatsapp}
           slotData={slotData}
         />
@@ -436,6 +508,8 @@ if (settingsSnap.exists()) {
           setDateKhamis={setDateKhamis}
           dateJumaat={dateJumaat}
           setDateJumaat={setDateJumaat}
+          dateSabtu={dateSabtu}
+          setDateSabtu={setDateSabtu}
           whatsapp={whatsapp}
           setWhatsapp={setWhatsapp}
           slotLimits={slotLimits}
@@ -455,6 +529,116 @@ if (settingsSnap.exists()) {
           walkinProfit={walkinProfit}
         />
       )}
+      {pendingAgreement && (
+  <Popup>
+    <h2 className="horror-subtitle mb-4 text-center text-3xl text-red-600">
+      PERATURAN PESERTA
+    </h2>
+
+    <div className="max-h-[350px] overflow-y-auto rounded-xl border border-red-900 bg-black/70 p-4 text-sm leading-7">
+
+      <p className="font-bold text-red-500">
+        PESERTA HENDAKLAH MEMATUHI PERATURAN DI BAWAH:
+      </p>
+
+      <br />
+
+      <p>
+        1. Semua peserta hendaklah menjaga tutur kata dan tidak menggunakan bahasa yang kesat atau tidak sopan sepanjang program berlangsung.
+      </p>
+
+      <p>
+        2. Peserta tidak dibenarkan membuat sebarang rakaman video atau audio semasa permainan dijalankan.
+      </p>
+
+      <p>
+        3. Pihak penganjur tidak akan bertanggungjawab terhadap sebarang kehilangan atau kerosakan barangan peribadi.
+      </p>
+
+      <p>
+        4. Telefon bimbit akan dikumpulkan sebelum permainan bermula dan hanya akan dipulangkan selepas permainan tamat.
+      </p>
+
+      <label className="mt-5 flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={agreeRules}
+          onChange={(e) =>
+            setAgreeRules(e.target.checked)
+          }
+        />
+
+        <span>
+          Saya telah membaca dan bersetuju dengan semua peraturan di atas.
+        </span>
+      </label>
+
+      <hr className="my-5 border-red-900" />
+
+      <h3 className="font-bold text-red-500">
+        Declaration of Own Responsibility
+      </h3>
+
+      <p className="mt-3">
+        Dengan menekan kotak persetujuan ini, saya mengesahkan bahawa saya telah membaca,
+        memahami dan bersetuju dengan segala syarat yang dinyatakan.
+      </p>
+
+      <p className="mt-3">
+        Saya mengakui bahawa segala tindakan, keputusan, risiko dan implikasi adalah
+        di bawah tanggungjawab saya sendiri.
+      </p>
+
+      <p className="mt-3">
+        Saya juga bersetuju untuk tidak membuat sebarang tuntutan atau
+        mempertanggungjawabkan mana-mana pihak terhadap perkara yang berlaku
+        hasil daripada tindakan saya sendiri.
+      </p>
+
+      <label className="mt-5 flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={agreeDeclaration}
+          onChange={(e) =>
+            setAgreeDeclaration(e.target.checked)
+          }
+        />
+
+        <span>
+          Saya bersetuju dengan Declaration of Own Responsibility.
+        </span>
+      </label>
+
+    </div>
+
+    <button
+      disabled={
+        !agreeRules ||
+        !agreeDeclaration
+      }
+      onClick={() => {
+        setPendingPayment(
+          pendingAgreement
+        )
+
+        setPendingAgreement(
+          null
+        )
+      }}
+      className="
+      mt-5
+      w-full
+      rounded-xl
+      bg-red-700
+      py-3
+      font-bold
+      disabled:bg-gray-700
+      "
+    >
+      Continue To Payment
+    </button>
+  </Popup>
+)}
             {pendingPayment && (
         <Popup>
           <h2 className="horror-subtitle mb-4 text-center text-4xl text-red-600">
@@ -569,7 +753,12 @@ if (settingsSnap.exists()) {
           <p className="mt-5 text-center text-sm text-gray-400">
             Screenshot QR ini semasa hadir ke event.
           </p>
-
+                <button
+  onClick={() => downloadTicketPDF(success)}
+  className="mt-5 w-full rounded-xl bg-green-700 py-3 font-bold hover:bg-green-600"
+>
+  Download PDF Ticket
+</button>
           <button
             onClick={() => setSuccess(false)}
             className="mt-6 w-full rounded-xl bg-red-700 py-3 font-bold hover:bg-red-600"
@@ -643,9 +832,11 @@ if (settingsSnap.exists()) {
                 className="rounded-xl border border-red-900 bg-black/70 p-3"
               >
                 {index + 1}. {
-                typeof member === "string"
-                  ? member
-                  : `${member.name} (${member.studentId})`
+               typeof member === "string"
+  ? member
+  : member.studentId
+  ? `${member.name} (${member.studentId})`
+  : `${member.name} (${member.phone})`
               }
               </li>
             ))}
@@ -872,10 +1063,13 @@ text-red-500
 }
 function MainPage({
   setPage,
+  participantType,
+setParticipantType,
   setShowAdminLogin,
   handleBooking,
   dateKhamis,
   dateJumaat,
+  dateSabtu,
   whatsapp,
   slotData,
 }) {
@@ -950,9 +1144,11 @@ function MainPage({
           <div className="self-start space-y-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <InfoSmall
-                title="Hari"
-                text={`Khamis (${dateKhamis}) & Jumaat (${dateJumaat})`}
-              />
+  title="Hari"
+  text={`Khamis (${dateKhamis})
+Jumaat (${dateJumaat})
+Sabtu (${dateSabtu})`}
+/>
               <InfoSmall title="Session" text="Pagi dan Petang" />
 
               <div className="h-fit rounded-xl border border-red-900/50 bg-black/60 p-5">
@@ -1001,6 +1197,17 @@ function MainPage({
                   booked={slotData.jumaatPetang.booked}
                   max={slotData.jumaatPetang.max}
                 />
+                <SlotCard
+                  title="Sabtu Pagi"
+                  booked={slotData.sabtuPagi.booked}
+                  max={slotData.sabtuPagi.max}
+                />
+
+                <SlotCard
+                  title="Sabtu Petang"
+                  booked={slotData.sabtuPetang.booked}
+                  max={slotData.sabtuPetang.max}
+                />
               </div>
             </div>
           </div>
@@ -1016,6 +1223,7 @@ function MainPage({
               <option value="">Pilih Hari</option>
               <option>Khamis</option>
               <option>Jumaat</option>
+              <option>Sabtu</option>
             </select>
 
             <select required name="session" defaultValue="" className="field">
@@ -1024,23 +1232,63 @@ function MainPage({
               <option>Petang</option>
             </select>
 
-                {[1, 2, 3, 4, 5].map((num) => (
-        <div key={num} className="grid grid-cols-1 gap-2 md:grid-cols-2">
-          <input
-            required
-            name={`member${num}`}
-            placeholder={`Nama Ahli ${num}`}
-            className="field"
-          />
+               <div className="grid grid-cols-2 gap-3 mb-4">
 
-          <input
-            required
-            name={`studentId${num}`}
-            placeholder={`Student ID Ahli ${num}`}
-            className="field"
-          />
-        </div>
-      ))}
+  <label className="flex items-center gap-2 rounded-xl border border-red-900 bg-black p-3">
+    <input
+      type="radio"
+      name="participantType"
+      value="student"
+      checked={participantType === "student"}
+      onChange={() => setParticipantType("student")}
+    />
+    Student
+  </label>
+
+  <label className="flex items-center gap-2 rounded-xl border border-red-900 bg-black p-3">
+    <input
+      type="radio"
+      name="participantType"
+      value="nonStudent"
+      checked={participantType === "nonStudent"}
+      onChange={() => setParticipantType("nonStudent")}
+    />
+    Non Student
+  </label>
+
+</div>
+
+{[1, 2, 3, 4, 5].map((num) => (
+  <div
+    key={num}
+    className="grid grid-cols-1 gap-2 md:grid-cols-2"
+  >
+
+    <input
+      required
+      name={`member${num}`}
+      placeholder={`Nama Ahli ${num}`}
+      className="field"
+    />
+
+    {participantType === "student" ? (
+      <input
+        required
+        name={`studentId${num}`}
+        placeholder={`Student ID Ahli ${num}`}
+        className="field"
+      />
+    ) : (
+      <input
+        required
+        name={`memberPhone${num}`}
+        placeholder={`No Telefon Ahli ${num}`}
+        className="field"
+      />
+    )}
+
+  </div>
+))}
 
             <input required name="phone" placeholder="No Telefon Wakil" className="field" />
 
@@ -1073,6 +1321,8 @@ function AdminPanel(props) {
     setDateKhamis,
     dateJumaat,
     setDateJumaat,
+    dateSabtu,
+    setDateSabtu,
     whatsapp,
     setWhatsapp,
     slotLimits,
@@ -1564,6 +1814,8 @@ function SettingsPanel({
   setDateKhamis,
   dateJumaat,
   setDateJumaat,
+  dateSabtu,
+setDateSabtu,
   whatsapp,
   setWhatsapp,
   slotLimits,
@@ -1591,6 +1843,11 @@ function SettingsPanel({
           title="Tarikh Jumaat"
           value={dateJumaat}
           setValue={setDateJumaat}
+        />
+        <Setting
+          title="Tarikh Sabtu"
+          value={dateSabtu}
+          setValue={setDateSabtu}
         />
 
         <Setting
@@ -1646,6 +1903,29 @@ function SettingsPanel({
           }
           type="number"
         />
+        <Setting
+          title="Sabtu Pagi Max Group"
+          value={slotLimits.sabtuPagi}
+          setValue={(value) =>
+            setSlotLimits({
+              ...slotLimits,
+              sabtuPagi: Number(value),
+            })
+          }
+          type="number"
+        />
+
+        <Setting
+          title="Sabtu Petang Max Group"
+          value={slotLimits.sabtuPetang}
+          setValue={(value) =>
+            setSlotLimits({
+              ...slotLimits,
+              sabtuPetang: Number(value),
+            })
+          }
+          type="number"
+/>
       </div>
       <button
   onClick={saveSettings}
