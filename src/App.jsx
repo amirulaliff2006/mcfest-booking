@@ -43,6 +43,8 @@ function App() {
 
   const [walkinName, setWalkinName] = useState("")
   const [walkinPax, setWalkinPax] = useState(1)
+  const [showWalkinForm, setShowWalkinForm] = useState(false)
+  const [walkinParticipantType, setWalkinParticipantType] = useState("student")
 
   const [ticketPrice, setTicketPrice] = useState(0)
   const [dateKhamis, setDateKhamis] = useState("23 Mei 2026")
@@ -318,6 +320,86 @@ e.target.reset()
     setBookings(bookings.filter((booking) => booking.id !== id))
   }
 
+  async function createWalkinBooking() {
+  const groupName =
+    document.getElementById("walkinGroupName")?.value || ""
+
+  const phone =
+    document.getElementById("walkinPhone")?.value || ""
+
+  const day =
+    document.getElementById("walkinDay")?.value || "Khamis"
+
+  const session =
+    document.getElementById("walkinSession")?.value || "Pagi"
+
+  if (!groupName || !phone) {
+    alert("Sila isi maklumat kumpulan")
+    return
+  }
+
+  const members = [1, 2, 3, 4, 5].map((num) => ({
+    name:
+      document.getElementById(`walkinMember${num}`)?.value || "",
+
+    studentId:
+      document.getElementById(`walkinStudent${num}`)?.value || "",
+
+    phone:
+      document.getElementById(`walkinMemberPhone${num}`)?.value || "",
+  }))
+
+  const walkinData = {
+    ticketId: `WALKIN-${Date.now()}`,
+
+    type: "walkin",
+
+    participantType: walkinParticipantType,
+
+    groupName,
+
+    phone,
+
+    members,
+
+    pax: 5,
+
+    day,
+
+    session,
+
+    date:
+      day === "Khamis"
+        ? dateKhamis
+        : day === "Jumaat"
+        ? dateJumaat
+        : dateSabtu,
+
+    paymentStatus: "Walk-In",
+
+    status: "Done",
+
+    createdAt: new Date(),
+  }
+
+  const docRef = await addDoc(
+    collection(db, "bookings"),
+    walkinData
+  )
+
+  setBookings([
+    ...bookings,
+    {
+      ...walkinData,
+      id: docRef.id,
+    },
+  ])
+
+  setShowWalkinForm(false)
+
+  alert("Walk-in berjaya ditambah")
+}
+
   async function addWalkin() {
     if (!walkinName) return
 
@@ -394,9 +476,10 @@ e.target.reset()
   const rows = []
 
   bookings.forEach((booking) => {
-    if (booking.type === "booking") {
+    
       ;(booking.members || []).forEach((member, index) => {
         rows.push({
+          "Type":booking.type,
           "Ticket ID": booking.ticketId,
           "Group Name": booking.groupName,
           "Member No": index + 1,
@@ -412,7 +495,7 @@ e.target.reset()
           "Status": booking.status,
         })
       })
-    }
+    
   })
 
   const worksheet = XLSX.utils.json_to_sheet(rows)
@@ -539,6 +622,7 @@ sabtuPetang: Number(slotLimits.sabtuPetang),
           walkinPax={walkinPax}
           setWalkinPax={setWalkinPax}
           addWalkin={addWalkin}
+          setShowWalkinForm={setShowWalkinForm}
           search={search}
           setSearch={setSearch}
           filter={filter}
@@ -711,7 +795,103 @@ sabtuPetang: Number(slotLimits.sabtuPetang),
           </button>
         </Popup>
       )}
+    {showWalkinForm && (
+  <Popup>
+    <h2 className="horror-subtitle mb-4 text-center text-3xl text-red-600">
+      WALK-IN REGISTRATION
+    </h2>
 
+    <input
+      className="field mb-3"
+      placeholder="Nama Kumpulan"
+      id="walkinGroupName"
+    />
+
+    <input
+      className="field mb-3"
+      placeholder="No Telefon Wakil"
+      id="walkinPhone"
+    />
+
+    <div className="grid grid-cols-2 gap-3 mb-3">
+      <select id="walkinDay" className="field">
+        <option>Khamis</option>
+        <option>Jumaat</option>
+        <option>Sabtu</option>
+      </select>
+
+      <select id="walkinSession" className="field">
+        <option>Pagi</option>
+        <option>Petang</option>
+      </select>
+    </div>
+
+    <div className="grid grid-cols-2 gap-3 mb-4">
+      <label className="flex items-center gap-2">
+        <input
+          type="radio"
+          checked={walkinParticipantType === "student"}
+          onChange={() =>
+            setWalkinParticipantType("student")
+          }
+        />
+        Student
+      </label>
+
+      <label className="flex items-center gap-2">
+        <input
+          type="radio"
+          checked={walkinParticipantType === "nonStudent"}
+          onChange={() =>
+            setWalkinParticipantType("nonStudent")
+          }
+        />
+        Non Student
+      </label>
+    </div>
+
+    {[1, 2, 3, 4, 5].map((num) => (
+      <div
+        key={num}
+        className="grid grid-cols-1 gap-2 mb-2 md:grid-cols-2"
+      >
+        <input
+          className="field"
+          placeholder={`Nama Ahli ${num}`}
+          id={`walkinMember${num}`}
+        />
+
+        {walkinParticipantType === "student" ? (
+          <input
+            className="field"
+            placeholder={`Student ID ${num}`}
+            id={`walkinStudent${num}`}
+          />
+        ) : (
+          <input
+            className="field"
+            placeholder={`No Telefon ${num}`}
+            id={`walkinMemberPhone${num}`}
+          />
+        )}
+      </div>
+    ))}
+
+    <button
+      onClick={createWalkinBooking}
+      className="mt-4 w-full rounded-xl bg-red-700 py-3 font-bold"
+    >
+      SAVE WALK-IN
+    </button>
+
+    <button
+      onClick={() => setShowWalkinForm(false)}
+      className="mt-3 w-full rounded-xl border border-red-700 py-3"
+    >
+      CANCEL
+    </button>
+  </Popup>
+)}
       {success && (
         <Popup>
           <div id="ticket-pdf" className="rounded-2xl bg-black p-5 text-white">
@@ -1007,11 +1187,16 @@ function TicketVerifyPage({
         "Done" ? (
 
           <button
-            onClick={() =>
-              markDone(
-                foundTicket.id
-              )
-            }
+            onClick={() =>{
+              const password = prompt("Masukkan Admin Password")
+
+              if (password ==="admin123"){
+                markDone(foundTicket.id)
+              } else {
+                alert("password SALAH! Admin SAHAJA!")
+              }
+      
+            }}
             className="
             w-full
             rounded-xl
@@ -1020,7 +1205,7 @@ function TicketVerifyPage({
             font-bold
             "
           >
-            MARK AS ENTERED
+           ADMIN MARK AS ENTERED
           </button>
 
         ) : (
@@ -1356,6 +1541,7 @@ function AdminPanel(props) {
     walkinPax,
     setWalkinPax,
     addWalkin,
+    setShowWalkinForm,
     search,
     setSearch,
     filter,
@@ -1457,7 +1643,7 @@ function AdminPanel(props) {
 
             <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
               <BookingTable
-                bookings={filteredBookings.filter((b) => b.type === "booking")}
+                bookings={filteredBookings}
                 setSelectedGroup={setSelectedGroup}
                 markDone={markDone}
                 deleteBooking={deleteBooking}
@@ -1502,11 +1688,11 @@ function AdminPanel(props) {
                     </button>
 
                     <button
-                      onClick={() => setAdminTab("walkin")}
-                      className="quick-btn"
-                    >
-                      Add Walk-in
-                    </button>
+                    onClick={() => setShowWalkinForm(true)}
+                    className="quick-btn"
+                  >
+                    Add Walk-in
+                  </button>
                       <button
                     onClick={exportParticipants}
                     className="quick-btn"
@@ -1522,7 +1708,7 @@ function AdminPanel(props) {
 
         {adminTab === "bookings" && (
           <BookingTable
-            bookings={filteredBookings.filter((b) => b.type === "booking")}
+            bookings={filteredBookings}
             setSelectedGroup={setSelectedGroup}
             markDone={markDone}
             deleteBooking={deleteBooking}
@@ -1540,6 +1726,7 @@ function AdminPanel(props) {
             setWalkinName={setWalkinName}
             walkinPax={walkinPax}
             setWalkinPax={setWalkinPax}
+            setShowWalkinForm={setShowWalkinForm}
             addWalkin={addWalkin}
             deleteBooking={deleteBooking}
             ticketPrice={ticketPrice}
@@ -1757,6 +1944,7 @@ function WalkinPanel({
   walkinPax,
   setWalkinPax,
   addWalkin,
+  setShowWalkinForm,
   deleteBooking,
   ticketPrice,
 }) {
@@ -1765,7 +1953,7 @@ function WalkinPanel({
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-xl font-black">Walk-in List</h3>
 
-        <button onClick={addWalkin} className="btn-red">
+        <button onClick={() => setShowWalkinForm(true)} className="btn-red">  
           + Add Walk-in
         </button>
       </div>
