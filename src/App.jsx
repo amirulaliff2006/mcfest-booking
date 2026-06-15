@@ -1742,6 +1742,8 @@ function AdminPanel(props) {
             setDateKhamis={setDateKhamis}
             dateJumaat={dateJumaat}
             setDateJumaat={setDateJumaat}
+            dateSabtu={setDateSabtu}
+            setDateSabtu={setDateSabtu}
             whatsapp={whatsapp}
             setWhatsapp={setWhatsapp}
             slotLimits={slotLimits}
