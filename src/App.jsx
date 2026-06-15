@@ -51,6 +51,7 @@ function App() {
   const [dateJumaat, setDateJumaat] = useState("24 Mei 2026")
   const [dateSabtu, setDateSabtu] = useState("20 June 2026")
   const [whatsapp, setWhatsapp] = useState("601139832542")
+  const [paymentLink, setPaymentLink] = useState("https://uitmpay.uitm.edu.my/otherservices/products/AAT3/02/6627")
 
   const [slotLimits, setSlotLimits] = useState({
     khamisPagi: 20,
@@ -76,6 +77,7 @@ if (settingsSnap.exists()) {
 
   setTicketPrice(data.ticketPrice || 0)
   setWhatsapp(data.whatsapp || "")
+  setPaymentLink(data.paymentLink || "")
 
   setDateKhamis(data.dateKhamis || "")
   setDateJumaat(data.dateJumaat || "")
@@ -508,6 +510,7 @@ e.target.reset()
   await setDoc(doc(db, "settings", "eventConfig"), {
     ticketPrice: Number(ticketPrice),
     whatsapp: whatsapp,
+    paymentLink: paymentLink,
     dateKhamis: dateKhamis,
     dateJumaat: dateJumaat,
     dateSabtu: dateSabtu,
@@ -615,6 +618,8 @@ sabtuPetang: Number(slotLimits.sabtuPetang),
           setDateSabtu={setDateSabtu}
           whatsapp={whatsapp}
           setWhatsapp={setWhatsapp}
+          paymentLink={paymentLink}
+          setPaymentLink={setPaymentLink}
           slotLimits={slotLimits}
           setSlotLimits={setSlotLimits}
           walkinName={walkinName}
@@ -756,13 +761,18 @@ sabtuPetang: Number(slotLimits.sabtuPetang),
             </p>
           </div>
 
-          <div className="mb-5 flex justify-center">
-            <img
-              src={paymentQR}
-              alt="Payment QR"
-              className="w-64 rounded-xl border border-white/10 bg-white p-2"
-            />
-          </div>
+          <a
+              href={paymentLink}
+              target="_blank"
+              rel="noreferrer"
+              className="mb-5 block w-full rounded-xl bg-red-700 py-4 text-center font-black uppercase tracking-widest hover:bg-red-600"
+            >
+              Proceed To Payment
+            </a>
+
+            <p className="mb-5 text-center text-sm text-gray-400">
+              Selepas pembayaran berjaya, kembali ke halaman ini dan upload bukti pembayaran.
+            </p>
 
           <div className="mb-5 space-y-2 text-center">
             <p>Group: {pendingPayment.groupName}</p>
@@ -1534,6 +1544,8 @@ function AdminPanel(props) {
     setDateSabtu,
     whatsapp,
     setWhatsapp,
+    paymentLink,
+    setPaymentLink,
     slotLimits,
     setSlotLimits,
     walkinName,
@@ -1737,6 +1749,8 @@ function AdminPanel(props) {
           <SettingsPanel
             ticketPrice={ticketPrice}
             saveSettings={saveSettings}
+            paymentLink={paymentLink}
+            setPaymentLink={setPaymentLink}
             setTicketPrice={setTicketPrice}
             dateKhamis={dateKhamis}
             setDateKhamis={setDateKhamis}
@@ -2023,6 +2037,8 @@ function WalkinPanel({
 function SettingsPanel({
   ticketPrice,
   saveSettings,
+  paymentLink,
+  setPaymentLink,
   setTicketPrice,
   dateKhamis,
   setDateKhamis,
@@ -2069,7 +2085,11 @@ function SettingsPanel({
           value={whatsapp}
           setValue={setWhatsapp}
         />
-
+        <Setting
+          title="Payment Link"
+          value={paymentLink}
+          setValue={setPaymentLink}
+        />
         <Setting
           title="Khamis Pagi Max Group"
           value={slotLimits.khamisPagi}
