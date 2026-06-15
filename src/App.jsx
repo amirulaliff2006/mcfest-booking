@@ -2029,7 +2029,7 @@ function SettingsPanel({
   dateJumaat,
   setDateJumaat,
   dateSabtu,
-setDateSabtu,
+  setDateSabtu,
   whatsapp,
   setWhatsapp,
   slotLimits,
