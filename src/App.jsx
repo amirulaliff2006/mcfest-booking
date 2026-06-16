@@ -973,6 +973,14 @@ sabtuPetang: Number(slotLimits.sabtuPetang),
 >
   Download PDF Ticket
 </button>
+<a
+  href="https://chat.whatsapp.com/HEp7xMCYN8J9goyYwfaUKe?s=cl&p=a&ilr=0"
+  target="_blank"
+  rel="noreferrer"
+  className="mt-5 block w-full rounded-xl bg-green-700 py-3 text-center font-bold hover:bg-green-600"
+>
+  Join Group WhatsApp
+</a>
           <button
             onClick={() => setSuccess(false)}
             className="mt-6 w-full rounded-xl bg-red-700 py-3 font-bold hover:bg-red-600"
