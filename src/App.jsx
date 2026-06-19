@@ -58,6 +58,7 @@ function App() {
     khamisPetang: 20,
     jumaatPagi: 20,
     jumaatPetang: 20,
+    jumaatMalam: 20,
     sabtuPagi: 20,
     sabtuPetang: 20,
   })
@@ -89,6 +90,7 @@ if (settingsSnap.exists()) {
 
     jumaatPagi: data.jumaatPagi || 20,
     jumaatPetang: data.jumaatPetang || 20,
+    jumaatMalam: data.jumaatMalam || 20,
 
     sabtuPagi: data.sabtuPagi || 20,
     sabtuPetang: data.sabtuPetang || 20,
@@ -126,6 +128,11 @@ if (settingsSnap.exists()) {
   const jumaatPetangBooked = onlineBookings.filter(
     (b) => b.day === "Jumaat" && b.session === "Petang"
   ).length
+  const jumaatMalamBooked = onlineBookings.filter(
+  (b) =>
+    b.day === "Jumaat" &&
+    b.session === "Malam"
+).length
 const sabtuPagiBooked = onlineBookings.filter(
   (b) => b.day === "Sabtu" && b.session === "Pagi"
 ).length
@@ -151,6 +158,10 @@ const sabtuPetangBooked = onlineBookings.filter(
       booked: jumaatPetangBooked,
       max: slotLimits.jumaatPetang,
     },
+    jumaatMalam: {
+  booked: jumaatMalamBooked,
+  max: slotLimits.jumaatMalam,
+},
     sabtuPagi: {
   booked: sabtuPagiBooked,
   max: slotLimits.sabtuPagi,
@@ -204,7 +215,16 @@ sabtuPetang: {
     ) {
       alert("Jumaat Petang FULL")
       return
-    }if (
+    }
+if (
+  selectedDay === "Jumaat" &&
+  selectedSession === "Malam" &&
+  jumaatMalamBooked >= slotLimits.jumaatMalam
+) {
+  alert("Jumaat Malam FULL")
+  return
+}    
+    if (
   selectedDay === "Sabtu" &&
   selectedSession === "Pagi" &&
   sabtuPagiBooked >= slotLimits.sabtuPagi
@@ -521,6 +541,7 @@ sabtuPetang: Number(slotLimits.sabtuPetang),
     khamisPetang: Number(slotLimits.khamisPetang),
     jumaatPagi: Number(slotLimits.jumaatPagi),
     jumaatPetang: Number(slotLimits.jumaatPetang),
+    jumaatMalam: Number(slotLimits.jumaatMalam),
   })
 
   alert("Settings saved successfully!")
@@ -831,8 +852,12 @@ sabtuPetang: Number(slotLimits.sabtuPetang),
       </select>
 
       <select id="walkinSession" className="field">
-        <option>Pagi</option>
-        <option>Petang</option>
+       <option>Pagi</option>
+<option>Petang</option>
+
+{selectedDay === "Jumaat" && (
+  <option>Malam</option>
+)}
       </select>
     </div>
 
@@ -1300,6 +1325,7 @@ setParticipantType,
   whatsapp,
   slotData,
 }) {
+  const [selectedDay, setSelectedDay] = useState("")
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
       <div className="main-bg"></div>
@@ -1352,7 +1378,7 @@ setParticipantType,
 
           <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-0 sm:grid-cols-3">
             <Info title="5 Pax 1 Group" text="Kumpulkan 5 orang ahli" icon="👥" />
-            <Info title="2 Session" text="Pagi & Petang" icon="🕘" middle />
+            <Info title="2 Session" text="Pagi & Petang & Malam" icon="🕘" middle />
             <Info title="3 Hari Sahaja!" text="Khamis Jumaat & Sabtu" icon="📅" />
           </div>
 
@@ -1425,6 +1451,11 @@ Sabtu (${dateSabtu})`}
                   max={slotData.jumaatPetang.max}
                 />
                 <SlotCard
+                  title="Jumaat Malam"
+                  booked={slotData.jumaatMalam.booked}
+                  max={slotData.jumaatMalam.max}
+                />
+                <SlotCard
                   title="Sabtu Pagi"
                   booked={slotData.sabtuPagi.booked}
                   max={slotData.sabtuPagi.max}
@@ -1446,18 +1477,32 @@ Sabtu (${dateSabtu})`}
 
             <input required name="groupName" placeholder="Nama Group" className="field" />
 
-            <select required name="day" defaultValue="" className="field">
+            <select   required
+            name="day"
+            value={selectedDay}
+            onChange={(e) => setSelectedDay(e.target.value)}
+            className="field"
+          >
               <option value="">Pilih Hari</option>
               <option>Khamis</option>
               <option>Jumaat</option>
               <option>Sabtu</option>
             </select>
 
-            <select required name="session" defaultValue="" className="field">
-              <option value="">Pilih Session</option>
-              <option>Pagi</option>
-              <option>Petang</option>
-            </select>
+           <select
+  required
+  name="session"
+  defaultValue=""
+  className="field"
+>
+  <option value="">Pilih Session</option>
+  <option>Pagi</option>
+  <option>Petang</option>
+
+  {selectedDay === "Jumaat" && (
+    <option>Malam</option>
+  )}
+</select>
 
                <div className="grid grid-cols-2 gap-3 mb-4">
 
@@ -2145,6 +2190,17 @@ function SettingsPanel({
           }
           type="number"
         />
+        <Setting
+  title="Jumaat Malam Max Group"
+  value={slotLimits.jumaatMalam}
+  setValue={(value) =>
+    setSlotLimits({
+      ...slotLimits,
+      jumaatMalam: Number(value),
+    })
+  }
+  type="number"
+/>
         <Setting
           title="Sabtu Pagi Max Group"
           value={slotLimits.sabtuPagi}
