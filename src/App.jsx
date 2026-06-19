@@ -1030,7 +1030,7 @@ sabtuPetang: Number(slotLimits.sabtuPetang),
 
     <button
       onClick={() => {
-        if (adminPassword === "admin123") {
+        if (adminPassword === "a1b2c3d4") {
           setIsAdminLoggedIn(true)
           setShowAdminLogin(false)
           setPage("admin")
